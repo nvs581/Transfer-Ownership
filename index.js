@@ -1,8 +1,10 @@
+const chalk = require('chalk'); //optional
 const fs = require('fs');
 const { google } = require('googleapis');
 const express = require('express');
 const destroyer = require('server-destroy'); // To close the server after authorization
 const { exec } = require('child_process'); // For opening the browser (Windows)
+const readline = require('readline'); // For reading user input
 require('dotenv').config(); // Load environment variables from .env
 
 const TOKEN_PATH = 'token.json';
@@ -19,10 +21,10 @@ const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_u
 fs.readFile(TOKEN_PATH, (err, token) => {
   if (err) return getAccessToken(oAuth2Client);
   oAuth2Client.setCredentials(JSON.parse(token));
-  console.log('Token already available.');
+  console.log('\r\nToken already available.\r\n');
 
-  // Call transferOwnership after successfully setting credentials
-  initiateOwnershipTransfer(oAuth2Client, 'file-ID', 'new-owner-email');
+  // Prompt the user for file ID and new owner's email
+  promptUserForInput(oAuth2Client);
 });
 
 function getAccessToken(oAuth2Client) {
@@ -39,7 +41,7 @@ function getAccessToken(oAuth2Client) {
     scope: SCOPES,
   });
 
-  console.log('Authorize this app by visiting this url:', authUrl);
+  console.log('\r\nAuthorize this app by visiting this url:', authUrl);
   exec(`start ${authUrl}`);
 
   app.get('/auth/callback', (req, res) => {
@@ -61,11 +63,30 @@ function getAccessToken(oAuth2Client) {
 }
 
 /**
+ * Prompt user for file ID and new owner's email.
+ * @param {OAuth2Client} auth - The authenticated Google OAuth client.
+ */
+function promptUserForInput(auth) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  rl.question('\r\nEnter the File ID: ', (fileId) => {
+    rl.question('Enter the New Owner Email: ', (newOwnerEmail) => {
+      initiateOwnershipTransfer(auth, fileId, newOwnerEmail);
+      rl.close();
+    });
+  });
+}
+
+/**
  * Initiate ownership transfer by the current owner.
  * @param {OAuth2Client} auth - The authenticated Google OAuth client.
  * @param {string} fileId - The ID of the file you want to transfer ownership of.
  * @param {string} newOwnerEmail - The email address of the new prospective owner.
  */
+
 function initiateOwnershipTransfer(auth, fileId, newOwnerEmail) {
   const drive = google.drive({ version: 'v3', auth });
 
@@ -81,11 +102,15 @@ function initiateOwnershipTransfer(auth, fileId, newOwnerEmail) {
     sendNotificationEmail: true     // Send an email to the prospective owner
   }, (err, res) => {
     if (err) {
-      console.error('Error creating writer permission:', err);
+      console.error(chalk.red('Error creating writer permission:'), err);
       return;
     }
+    
+    // Store the permission ID for the next step
     const permissionId = res.data.id;
-    console.log(`Writer permission created. Permission ID: ${permissionId}`);
+
+    // Log a simple and clean message in green
+    console.log(chalk.green(`Successfully added ${newOwnerEmail} as a writer. Proceeding with ownership transfer...`));
 
     // Next, update the permission to transfer ownership
     drive.permissions.update({
@@ -98,21 +123,36 @@ function initiateOwnershipTransfer(auth, fileId, newOwnerEmail) {
       fields: 'id'
     }, (err, res) => {
       if (err) {
-        console.error('Error updating permission with pendingOwner:', err);
+        console.error(chalk.red('Error updating permission with pendingOwner:'), err);
         return;
       }
-      console.log('Ownership transfer initiated with pendingOwner set to true.');
 
-      // Now retrieve and verify the permissions to ensure pendingOwner is set
+      // Log a clean ownership transfer message in green
+      console.log(chalk.green(`Ownership transfer in progress for file ID: ${fileId}. ${newOwnerEmail} will become the new owner soon.`));
+
+      // Retrieve and verify the permissions to ensure pendingOwner is set
       drive.permissions.list({
         fileId: fileId,
         fields: 'permissions(id, type, emailAddress, role, pendingOwner)'
       }, (err, res) => {
         if (err) {
-          console.error('Error retrieving permissions:', err);
+          console.error(chalk.red('Error retrieving permissions:'), err);
           return;
         }
-        console.log('Permissions:', res.data.permissions);
+        
+        // Extracting and logging only essential information
+        const permissions = res.data.permissions.map(permission => {
+          return {
+            emailAddress: permission.emailAddress,
+            role: permission.role,
+            pendingOwner: permission.pendingOwner
+          };
+        });
+
+        console.log(chalk.blue('Current Permissions:'));
+        permissions.forEach(permission => {
+          console.log(chalk.blue(`- ${permission.emailAddress}: ${permission.role} (Pending Owner: ${permission.pendingOwner})`));
+        });
       });
     });
   });
