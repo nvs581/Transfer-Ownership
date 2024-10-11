@@ -39,6 +39,6 @@ The application follows these key steps to transfer ownership of a Google Drive 
 
 This sequence of steps allows the application to efficiently handle the file ownership transfer process in Google Drive.
 
-Acknowledgments
+## Acknowledgments
 
-This project is based on google-drive-ownership-transfer by arexonmortel. Thank you for the original work!
+This project is based on [google-drive-ownership-transfer](https://github.com/arexonmortel/google-drive-ownership-transfer) by [arexonmortel](https://github.com/arexonmortel). We appreciate their contributions and the groundwork they have laid for this project.
