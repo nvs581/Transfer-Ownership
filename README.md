@@ -38,3 +38,7 @@ The application follows these key steps to transfer ownership of a Google Drive 
    - Finally, it lists the current permissions to verify that the changes were successfully applied.
 
 This sequence of steps allows the application to efficiently handle the file ownership transfer process in Google Drive.
+
+Acknowledgments
+
+This project is based on google-drive-ownership-transfer by arexonmortel. Thank you for the original work!
