@@ -12,26 +12,29 @@ This Node.js application facilitates the transfer of file ownership in Google Dr
 - **Google Account**: A Google account with access to Google Drive.
 - **Environment Variables**: Create a `.env` file to store sensitive credentials such as `CLIENT_ID`, `CLIENT_SECRET`, and `REDIRECT_URI`.
 
+### 3. How It Works
 The application follows these key steps to transfer ownership of a Google Drive file:
 
-Load Environment Variables: The application loads sensitive credentials from the .env file using dotenv.
+1. **Load Environment Variables**  
+   The application loads sensitive credentials from the `.env` file using the `dotenv` library. This ensures that the application has access to the necessary API credentials without hardcoding them into the source code.
 
-OAuth2 Client Setup:
+2. **OAuth2 Client Setup**  
+   - An OAuth2 client is created using the client ID, client secret, and redirect URI defined in the `.env` file.
+   - The application attempts to read an existing token from `token.json` to authenticate subsequent requests. If the token does not exist, it calls the `getAccessToken` function to initiate the authentication flow.
 
-An OAuth2 client is created using the client ID, client secret, and redirect URI.
-It attempts to read an existing token from token.json to authenticate subsequent requests. If it doesn't exist, it calls the getAccessToken function to initiate the authentication flow.
-Authorization Process:
+3. **Authorization Process**  
+   - The `getAccessToken` function starts a local server to handle the OAuth2 callback.
+   - It generates an authorization URL, which is opened in the user's browser.
+   - After the user authorizes the application, Google redirects them back with an authorization code.
+   - The application retrieves an access token using the code and saves it to `token.json` for future use.
 
-The getAccessToken function starts a local server to handle the OAuth2 callback.
-It generates an authorization URL, which is opened in the user's browser.
-After the user authorizes the application, Google redirects them back with an authorization code.
-The application retrieves an access token using the code, which is then saved to token.json.
-User Input:
+4. **User Input**  
+   The application prompts the user for the file ID of the Google Drive file and the email address of the new owner using the `readline` module.
 
-The application prompts the user for the file ID and the email address of the new owner using readline.
-Ownership Transfer Process:
+5. **Ownership Transfer Process**  
+   - The `initiateOwnershipTransfer` function is called with the provided file ID and new owner's email address.
+   - First, it grants the new owner "writer" permissions on the file.
+   - Then, it updates the permission to set the new owner as the "pending owner."
+   - Finally, it lists the current permissions to verify that the changes were successfully applied.
 
-The initiateOwnershipTransfer function is called with the provided file ID and new owner's email.
-It first grants the new owner "writer" permissions on the file.
-Then, it updates the permission to set the new owner as the "pending owner."
-Finally, it lists current permissions to verify the changes.
+This sequence of steps allows the application to efficiently handle the file ownership transfer process in Google Drive.
