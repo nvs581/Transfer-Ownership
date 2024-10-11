@@ -3,28 +3,27 @@ const { google } = require('googleapis');
 const express = require('express');
 const destroyer = require('server-destroy'); // To close the server after authorization
 const { exec } = require('child_process'); // For opening the browser (Windows)
+require('dotenv').config(); // Load environment variables from .env
 
 const TOKEN_PATH = 'token.json';
 const SCOPES = ['https://www.googleapis.com/auth/drive'];
 
-fs.readFile('credentials.json', (err, content) => {
-  if (err) return console.log('Error loading client secret file:', err);
-  authorize(JSON.parse(content));
+// Get credentials from environment variables
+const client_id = process.env.CLIENT_ID;
+const client_secret = process.env.CLIENT_SECRET;
+const redirect_uris = process.env.REDIRECT_URI.split(',');
+
+// Set up OAuth2 client
+const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+
+fs.readFile(TOKEN_PATH, (err, token) => {
+  if (err) return getAccessToken(oAuth2Client);
+  oAuth2Client.setCredentials(JSON.parse(token));
+  console.log('Token already available.');
+
+  // Call transferOwnership after successfully setting credentials
+  initiateOwnershipTransfer(oAuth2Client, 'file-ID', 'new-owner-email');
 });
-
-function authorize(credentials) {
-  const { client_secret, client_id, redirect_uris } = credentials.installed;
-  const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
-
-  fs.readFile(TOKEN_PATH, (err, token) => {
-    if (err) return getAccessToken(oAuth2Client);
-    oAuth2Client.setCredentials(JSON.parse(token));
-    console.log('Token already available.');
-    
-    // Call transferOwnership after successfully setting credentials
-    initiateOwnershipTransfer(oAuth2Client, 'file-ID', 'new-owner-email');
-  });
-}
 
 function getAccessToken(oAuth2Client) {
   const app = express();
@@ -39,7 +38,7 @@ function getAccessToken(oAuth2Client) {
     access_type: 'offline',
     scope: SCOPES,
   });
-  
+
   console.log('Authorize this app by visiting this url:', authUrl);
   exec(`start ${authUrl}`);
 
