@@ -1,6 +1,4 @@
-# GDrive_Transfer_Ownership
-
-## Project Documentation
+# Project Documentation
 
 ### 1. Project Overview
 
